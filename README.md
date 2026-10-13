@@ -6,8 +6,9 @@ A group chat app built with **Flutter** and **Firebase**. Users sign up, create 
 
 - Email/password sign up and login (Firebase Authentication)
 - Stays logged in between app launches
-- Create groups, search groups by name, join or leave them
-- Real-time group messaging (Cloud Firestore)
+- Create groups, search groups by name (prefix match), join or leave them
+- Real-time group messaging (Cloud Firestore) with message times and Today/Yesterday dividers
+- Unread dot on groups with new messages
 - Group info page showing the admin and members
 - Profile page with name and email
 

@@ -70,7 +70,15 @@ getGroupMembers(groupId) async {
 }
 //search
 searchByName(String groupName){
-  return groupsCollection.where("groupName",isEqualTo: groupName).get();
+  // prefix match: "Flu" finds "Flutter Devs" (case-sensitive)
+  return groupsCollection
+      .where("groupName", isGreaterThanOrEqualTo: groupName)
+      .where("groupName", isLessThan: "$groupName")
+      .get();
+}
+// live group document, used for the unread dot
+Stream<DocumentSnapshot> getGroupStream(String groupId) {
+  return groupsCollection.doc(groupId).snapshots();
 }
 //function -> bool
 Future<bool> isUserJoined(String groupName,String groupId,String userName) async {

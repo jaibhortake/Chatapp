@@ -37,5 +37,14 @@ class HelperFunction {
     return sf.getString(userEmailKey);
   }
 
+  // last time (microseconds) the user opened a group, used for the unread dot
+  static Future<bool> saveLastSeen(String groupId, int time) async {
+    SharedPreferences sf = await SharedPreferences.getInstance();
+    return await sf.setInt("LASTSEEN_$groupId", time);
+  }
 
+  static Future<int> getLastSeen(String groupId) async {
+    SharedPreferences sf = await SharedPreferences.getInstance();
+    return sf.getInt("LASTSEEN_$groupId") ?? 0;
+  }
 }

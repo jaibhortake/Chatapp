@@ -1,3 +1,4 @@
+import 'package:chatme/helper/helper_function.dart';
 import 'package:chatme/pages/groupinfo.dart';
 import 'package:chatme/service/database_service.dart';
 import 'package:chatme/widgets/messagetile.dart';
@@ -23,12 +24,26 @@ class _ChatPageState extends State<ChatPage> {
   Stream<QuerySnapshot>? chats;
   String admin = "" ;
   TextEditingController messageController = TextEditingController();
+  ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     getChatandAdmin();
+    markSeen();
+  }
+
+  @override
+  void dispose() {
+    markSeen();
+    messageController.dispose();
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  // remember when this group was last opened, so the home page can show unread dots
+  void markSeen() {
+    HelperFunction.saveLastSeen(widget.groupId, DateTime.now().microsecondsSinceEpoch);
   }
 
   getChatandAdmin() {
@@ -110,20 +125,75 @@ class _ChatPageState extends State<ChatPage> {
     );
 
   }
+  // read the message time safely (older messages may not have one)
+  int? messageTime(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final t = data['time'];
+    return t is int ? t : null;
+  }
+
+  String dayLabel(int micros) {
+    DateTime t = DateTime.fromMicrosecondsSinceEpoch(micros);
+    DateTime now = DateTime.now();
+    DateTime day = DateTime(t.year, t.month, t.day);
+    DateTime today = DateTime(now.year, now.month, now.day);
+    int diff = today.difference(day).inDays;
+    if (diff == 0) return "Today";
+    if (diff == 1) return "Yesterday";
+    return "${t.day}/${t.month}/${t.year}";
+  }
+
+  Widget dayDivider(String label) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Color(0xFFEDECF4),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(label, style: TextStyle(fontSize: 12, color: Colors.black54)),
+        ),
+      ),
+    );
+  }
+
+  void scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (scrollController.hasClients) {
+        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      }
+    });
+  }
+
   chatMessages(){
     return StreamBuilder(
         stream: chats,
         builder: (context,AsyncSnapshot snapshot){
-          return snapshot.hasData ? ListView.builder(
-            itemCount: snapshot.data.docs.length,
+          if (!snapshot.hasData) return Container();
+          final docs = snapshot.data.docs as List<QueryDocumentSnapshot>;
+          scrollToBottom();
+          return ListView.builder(
+            controller: scrollController,
+            // leave room so the last message is not hidden behind the input bar
+            padding: EdgeInsets.only(top: 8, bottom: 100),
+            itemCount: docs.length,
               itemBuilder: (context,index){
-               return MessageTile(
-                   message: snapshot.data.docs[index]['message'],
-                   sender: snapshot.data.docs[index]['sender'],
-                   sentByMe: widget.userName==snapshot.data.docs[index]['sender']);
-
+               final data = docs[index].data() as Map<String, dynamic>;
+               final time = messageTime(docs[index]);
+               final prevTime = index > 0 ? messageTime(docs[index - 1]) : null;
+               bool showDivider = time != null &&
+                   (prevTime == null || dayLabel(time) != dayLabel(prevTime));
+               final tile = MessageTile(
+                   message: data['message'] ?? "",
+                   sender: data['sender'] ?? "",
+                   sentByMe: widget.userName==data['sender'],
+                   time: time);
+               if (!showDivider) return tile;
+               return Column(children: [dayDivider(dayLabel(time)), tile]);
               }
-          ) : Container();
+          );
         }
 
     );
