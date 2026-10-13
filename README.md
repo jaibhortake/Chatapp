@@ -42,7 +42,7 @@ lib/
 ### Run
 
 ```bash
-git clone https://github.com/jairupeshbhortake/Chatapp.git
+git clone https://github.com/jaibhortake/Chatapp.git
 cd Chatapp
 flutter pub get
 flutter run
